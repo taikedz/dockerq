@@ -20,22 +20,22 @@
 
 #%include inspect.sh
 
-$%function dctl:subcommand(subcommand) {
+$%function dockerq:subcommand(subcommand) {
     case "$subcommand" in
     i|images)
-        dctl:images:_main "$@"
+        dockerq:images:_main "$@"
         ;;
     v|volumes)
-        dctl:volumes:_main "$@"
+        dockerq:volumes:_main "$@"
         ;;
     c|containers)
-        dctl:containers:_main "$@"
+        dockerq:containers:_main "$@"
         ;;
     n|networks)
-        dctl:networks:_main "$@"
+        dockerq:networks:_main "$@"
         ;;
     inspect)
-        dctl:inspect:_main "$@"
+        dockerq:inspect:_main "$@"
         ;;
     *)
         out:fail "Unknown command: '$subcommand'"
@@ -43,10 +43,10 @@ $%function dctl:subcommand(subcommand) {
     esac
 }
 
-dctl:main() {
+dockerq:main() {
     autohelp:check-or-null "$@"
 
-    dctl:subcommand "$@"
+    dockerq:subcommand "$@"
 }
 
-dctl:main "$@"
+dockerq:main "$@"

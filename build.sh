@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-bbuild src/dockerctl.sh bin/dockerctl
+bbuild src/dockerq.sh bin/dockerq

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-### dockerctl ASSETTYPE [OPTIONS] Usage:help
-# Short, consistent docker commands for common tasks.
+### dockerq ASSETTYPE [OPTIONS] Usage:help
+#
+# Short, consistent docker query commands for common tasks.
 #
 # OPTIONS
 # -------
@@ -17,8 +18,8 @@
 #
 # -f, --format
 #   Specify a stored format string name
-#   You can store format strings in dockerctl-queries.conf
-#   in ./ , ~/.config/dockerctl/ or /etc/dockerctl/
+#   You can store format strings in dockerq-queries.conf
+#   in ./ , ~/.config/dockerq/ or /etc/dockerq/
 #   as key-value pairs
 #
 #   e.g.
@@ -1395,25 +1396,25 @@ config:load() {
     done
 }
 
-dctl:run() {
+dockerq:run() {
     # Use a docker command, either running it or printing it
     local dockerstring="$(args:quote docker "$@")"
 
     debug:print "$dockerstring"
 
-    if [[ "${DCTL_NOOP:-}" = true ]]; then
+    if [[ "${DOCKERQ_NOOP:-}" = true ]]; then
         out:info "$dockerstring"
     else
         docker "$@"
     fi
 }
 
-dctl:main:parse_list_args() {
+dockerq:main:parse_list_args() {
     local argdefs=(
-        b:DCTL_PRINTNAME:-n,--name
-        b:DCTL_PRINTID:-i,--id
-        s:DCTL_FORMATNAME:-f,--format
-        b:DCTL_ALL:-a,--all
+        b:DOCKERQ_PRINTNAME:-n,--name
+        b:DOCKERQ_PRINTID:-i,--id
+        s:DOCKERQ_FORMATNAME:-f,--format
+        b:DOCKERQ_ALL:-a,--all
         b:DEBUG_mode:--debug
     )
 
@@ -1421,30 +1422,30 @@ dctl:main:parse_list_args() {
 
     args:parse argdefs - "$@"
 
-    dctl:common:only_one DCTL_PRINTNAME DCTL_PRINTID DCTL_FORMATNAME || res="$?"
+    dockerq:common:only_one DOCKERQ_PRINTNAME DOCKERQ_PRINTID DOCKERQ_FORMATNAME || res="$?"
 
     if [[ "$res" = 2 ]] ; then
         out:fail "Conflicting flags --name, --id or --format specified simultaneously. Please only use one."
     fi
 
-    if [[ -n "${DCTL_FORMATNAME:-}" ]]; then
-        debug:print "Format name supplied: $DCTL_FORMATNAME"
-        DCTL_FORMATSTRING="$(dctl:config:read DCTL_JSON_FILTERS "$DCTL_FORMATNAME")"
-        debug:print "--> $DCTL_FORMATSTRING"
+    if [[ -n "${DOCKERQ_FORMATNAME:-}" ]]; then
+        debug:print "Format name supplied: $DOCKERQ_FORMATNAME"
+        DOCKERQ_FORMATSTRING="$(dockerq:config:read DOCKERQ_JSON_FILTERS "$DOCKERQ_FORMATNAME")"
+        debug:print "--> $DOCKERQ_FORMATSTRING"
     fi
 
-    if [[ "${DCTL_ALL:-}" = true ]]; then
-        DCTL_ALL=(: -a)
+    if [[ "${DOCKERQ_ALL:-}" = true ]]; then
+        DOCKERQ_ALL=(: -a)
     else
-        DCTL_ALL=(:)
+        DOCKERQ_ALL=(:)
     fi
 }
 
-dctl:common:column() {
+dockerq:common:column() {
     column -t -s $'\t'
 }
 
-dctl:common:only_one() {
+dockerq:common:only_one() {
     local name
 
     local res_found_one=0
@@ -1484,13 +1485,13 @@ dctl:common:only_one() {
     return $matched_one # Either $res_not_set or $res_is_set
 }
 
-dctl:config:_list_stored_strings() {
+dockerq:config:_list_stored_strings() {
     out:info "These are the configured filters"
 
     local available_files=(:)
     local k f keys
 
-    for f in "${DCTL_ASSET_CONFIGS[@]}"; do
+    for f in "${DOCKERQ_ASSET_CONFIGS[@]}"; do
         [[ ! -f "$f" ]] || available_files+=("$f")
     done
 
@@ -1504,97 +1505,97 @@ dctl:config:_list_stored_strings() {
     keys=($(grep -hPo '^(.+?)(?=\=)' "${available_files[@]:1}"|sort|uniq) )
 
     for k in "${keys[@]}"; do
-        echo "$k --> $(config:read DCTL_JSON_FILTERS "$k")"
+        echo "$k --> $(config:read DOCKERQ_JSON_FILTERS "$k")"
     done
 }
 
-dctl:config:read() {
+dockerq:config:read() {
     local value
     config:read "$@" || out:fail "Could not read from config | $2"
 }
 
-dctl:config:_set_asset_configs() {
-    local cfname="dockerctl-queries.conf"
-    local cfpath="dockerctl/$cfname"
+dockerq:config:_set_asset_configs() {
+    local cfname="dockerq-queries.conf"
+    local cfpath="dockerq/$cfname"
 
-    DCTL_ASSET_CONFIGS=(
+    DOCKERQ_ASSET_CONFIGS=(
         "./$cfname"
         "$HOME/.config/$cfpath"
         "/etc/$cfpath"
     )
 
-    config:declare DCTL_JSON_FILTERS "${DCTL_ASSET_CONFIGS[@]}"
+    config:declare DOCKERQ_JSON_FILTERS "${DOCKERQ_ASSET_CONFIGS[@]}"
 }
-dctl:config:_set_asset_configs
+dockerq:config:_set_asset_configs
 
-dctl:images:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:images:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run images --format '{{.Repository}}:{{.Tag}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run images --format '{{.Repository}}:{{.Tag}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run images --format '{{.ID}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run images --format '{{.ID}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run images --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run images --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run images
+        dockerq:run images
     fi
 }
-dctl:containers:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:containers:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run ps "${DCTL_ALL[@]:1}" --format '{{.Names}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}" --format '{{.Names}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run ps "${DCTL_ALL[@]:1}" --format '{{.ID}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}" --format '{{.ID}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run ps "${DCTL_ALL[@]:1}" --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}" --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run ps "${DCTL_ALL[@]:1}"
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}"
     fi
 }
-dctl:volumes:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:volumes:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run volume ls --format '{{.Name}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run volume ls --format '{{.Name}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run volume ls --format '{{.Name}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run volume ls --format '{{.Name}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run volume ls --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
-
-    else
-        dctl:run volume ls
-    fi
-}
-
-dctl:networks:_main() {
-    dctl:main:parse_list_args "$@"
-
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run network ls --format '{{.Name}}'
-
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run network ls --format '{{.ID}}'
-
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run network ls --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run volume ls --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run network ls
+        dockerq:run volume ls
     fi
 }
 
+dockerq:networks:_main() {
+    dockerq:main:parse_list_args "$@"
 
-### dockerctl inspect ASSETNAME FILTERNAME [OPTIONS] Usage:help
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run network ls --format '{{.Name}}'
+
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run network ls --format '{{.ID}}'
+
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run network ls --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
+
+    else
+        dockerq:run network ls
+    fi
+}
+
+
+### dockerq inspect ASSETNAME FILTERNAME [OPTIONS] Usage:help
 #
 # OPTIONS
 # -------
@@ -1615,7 +1616,7 @@ dctl:networks:_main() {
 # FILTERNAME
 # ----------
 #
-# Use a saved filter name. You can add these to a dockerctl-queries.conf file in your local directory, or in $HOME/.config/dockerctl/ or /etc/dockerctl/
+# Use a saved filter name. You can add these to a dockerq-queries.conf file in your local directory, or in $HOME/.config/dockerq/ or /etc/dockerq/
 #
 # Example
 # -------
@@ -1626,62 +1627,62 @@ dctl:networks:_main() {
 #
 # You can call like this
 #
-#   dockerctl inspect mycontainer ipf
+#   dockerq inspect mycontainer ipf
 #
 # To get the IP of the specified container, or
 #
-#   dockerctl inspect somename ipf -t container
+#   dockerq inspect somename ipf -t container
 #
 # To apply `somename` as a matching filter to all `container` names to run the inspect query against
 #
 ###/doc
 
-dctl:inspect:_main() {
+dockerq:inspect:_main() {
     . <(args:use:local assetname filtername -- "$@") ; 
     if [[ "$assetname" = '--list' ]]; then
-        dctl:config:_list_stored_strings
+        dockerq:config:_list_stored_strings
         exit
     fi
 
     local filterdefs=(
         s:assettype:-t,--type
         b:DEBUG_mode:--debug
-        b:DCTL_ALL:-a,--all
+        b:DOCKERQ_ALL:-a,--all
     )
     local assettype jsonstring
 
     args:parse filterdefs - "$@"
 
-    dctl:inspect:_load_json_string jsonstring "$filtername"
+    dockerq:inspect:_load_json_string jsonstring "$filtername"
 
     # Extrapolate asset type and set the flag array
     if [[ -n "${assettype:-}" ]]; then
-        dctl:inspect:_extrapolate_type assettype
+        dockerq:inspect:_extrapolate_type assettype
         assettype_a=(: --type="$assettype")
     else
         assettype_a=(:)
     fi
 
     # Use extrapolated asset type and list assets
-    if [[ "${DCTL_ALL:-}" = true ]] && [[ -n "${assettype:-}" ]]; then
-        all_assets=($(dctl:${assettype}s:_main -n | grep "$assetname"))
+    if [[ "${DOCKERQ_ALL:-}" = true ]] && [[ -n "${assettype:-}" ]]; then
+        all_assets=($(dockerq:${assettype}s:_main -n | grep "$assetname"))
     else
         all_assets=("$assetname")
     fi
 
     # =====
     for one_asset in "${all_assets[@]}"; do
-        dctl:run inspect "${assettype_a[@]:1}" "$one_asset" | jq "$jsonstring"
+        dockerq:run inspect "${assettype_a[@]:1}" "$one_asset" | jq "$jsonstring"
     done
 }
 
-dctl:inspect:_load_json_string() {
+dockerq:inspect:_load_json_string() {
     . <(args:use:local *p_return filtername -- "$@") ; 
-    p_return="$(dctl:config:read DCTL_JSON_FILTERS "$filtername")"
+    p_return="$(dockerq:config:read DOCKERQ_JSON_FILTERS "$filtername")"
     debug:print "Loaded json string: ${CBTEA}$p_return"
 }
 
-dctl:inspect:_extrapolate_type() {
+dockerq:inspect:_extrapolate_type() {
     . <(args:use:local *p_assettype -- "$@") ; 
     case "$p_assettype" in
     v|volume) p_assettype=volume ;;
@@ -1692,23 +1693,23 @@ dctl:inspect:_extrapolate_type() {
     esac
 }
 
-dctl:subcommand() {
+dockerq:subcommand() {
     . <(args:use:local subcommand -- "$@") ; 
     case "$subcommand" in
     i|images)
-        dctl:images:_main "$@"
+        dockerq:images:_main "$@"
         ;;
     v|volumes)
-        dctl:volumes:_main "$@"
+        dockerq:volumes:_main "$@"
         ;;
     c|containers)
-        dctl:containers:_main "$@"
+        dockerq:containers:_main "$@"
         ;;
     n|networks)
-        dctl:networks:_main "$@"
+        dockerq:networks:_main "$@"
         ;;
     inspect)
-        dctl:inspect:_main "$@"
+        dockerq:inspect:_main "$@"
         ;;
     *)
         out:fail "Unknown command: '$subcommand'"
@@ -1716,10 +1717,10 @@ dctl:subcommand() {
     esac
 }
 
-dctl:main() {
+dockerq:main() {
     autohelp:check-or-null "$@"
 
-    dctl:subcommand "$@"
+    dockerq:subcommand "$@"
 }
 
-dctl:main "$@"
+dockerq:main "$@"

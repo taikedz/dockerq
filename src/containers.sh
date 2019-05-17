@@ -1,16 +1,16 @@
-dctl:containers:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:containers:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run ps "${DCTL_ALL[@]:1}" --format '{{.Names}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}" --format '{{.Names}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run ps "${DCTL_ALL[@]:1}" --format '{{.ID}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}" --format '{{.ID}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run ps "${DCTL_ALL[@]:1}" --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}" --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run ps "${DCTL_ALL[@]:1}"
+        dockerq:run ps "${DOCKERQ_ALL[@]:1}"
     fi
 }

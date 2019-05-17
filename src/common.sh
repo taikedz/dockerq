@@ -1,22 +1,22 @@
-dctl:run() {
+dockerq:run() {
     # Use a docker command, either running it or printing it
     local dockerstring="$(args:quote docker "$@")"
 
     debug:print "$dockerstring"
 
-    if [[ "${DCTL_NOOP:-}" = true ]]; then
+    if [[ "${DOCKERQ_NOOP:-}" = true ]]; then
         out:info "$dockerstring"
     else
         docker "$@"
     fi
 }
 
-dctl:main:parse_list_args() {
+dockerq:main:parse_list_args() {
     local argdefs=(
-        b:DCTL_PRINTNAME:-n,--name
-        b:DCTL_PRINTID:-i,--id
-        s:DCTL_FORMATNAME:-f,--format
-        b:DCTL_ALL:-a,--all
+        b:DOCKERQ_PRINTNAME:-n,--name
+        b:DOCKERQ_PRINTID:-i,--id
+        s:DOCKERQ_FORMATNAME:-f,--format
+        b:DOCKERQ_ALL:-a,--all
         b:DEBUG_mode:--debug
     )
 
@@ -24,30 +24,30 @@ dctl:main:parse_list_args() {
 
     args:parse argdefs - "$@"
 
-    dctl:common:only_one DCTL_PRINTNAME DCTL_PRINTID DCTL_FORMATNAME || res="$?"
+    dockerq:common:only_one DOCKERQ_PRINTNAME DOCKERQ_PRINTID DOCKERQ_FORMATNAME || res="$?"
 
     if [[ "$res" = 2 ]] ; then
         out:fail "Conflicting flags --name, --id or --format specified simultaneously. Please only use one."
     fi
 
-    if [[ -n "${DCTL_FORMATNAME:-}" ]]; then
-        debug:print "Format name supplied: $DCTL_FORMATNAME"
-        DCTL_FORMATSTRING="$(dctl:config:read DCTL_JSON_FILTERS "$DCTL_FORMATNAME")"
-        debug:print "--> $DCTL_FORMATSTRING"
+    if [[ -n "${DOCKERQ_FORMATNAME:-}" ]]; then
+        debug:print "Format name supplied: $DOCKERQ_FORMATNAME"
+        DOCKERQ_FORMATSTRING="$(dockerq:config:read DOCKERQ_JSON_FILTERS "$DOCKERQ_FORMATNAME")"
+        debug:print "--> $DOCKERQ_FORMATSTRING"
     fi
 
-    if [[ "${DCTL_ALL:-}" = true ]]; then
-        DCTL_ALL=(: -a)
+    if [[ "${DOCKERQ_ALL:-}" = true ]]; then
+        DOCKERQ_ALL=(: -a)
     else
-        DCTL_ALL=(:)
+        DOCKERQ_ALL=(:)
     fi
 }
 
-dctl:common:column() {
+dockerq:common:column() {
     column -t -s $'\t'
 }
 
-dctl:common:only_one() {
+dockerq:common:only_one() {
     local name
 
     local res_found_one=0

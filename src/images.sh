@@ -1,16 +1,16 @@
-dctl:images:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:images:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run images --format '{{.Repository}}:{{.Tag}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run images --format '{{.Repository}}:{{.Tag}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run images --format '{{.ID}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run images --format '{{.ID}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run images --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run images --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run images
+        dockerq:run images
     fi
 }

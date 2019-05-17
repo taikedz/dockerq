@@ -1,4 +1,4 @@
-### dockerctl inspect ASSETNAME FILTERNAME [OPTIONS] Usage:help
+### dockerq inspect ASSETNAME FILTERNAME [OPTIONS] Usage:help
 #
 # OPTIONS
 # -------
@@ -19,7 +19,7 @@
 # FILTERNAME
 # ----------
 #
-# Use a saved filter name. You can add these to a dockerctl-queries.conf file in your local directory, or in $HOME/.config/dockerctl/ or /etc/dockerctl/
+# Use a saved filter name. You can add these to a dockerq-queries.conf file in your local directory, or in $HOME/.config/dockerq/ or /etc/dockerq/
 #
 # Example
 # -------
@@ -30,60 +30,60 @@
 #
 # You can call like this
 #
-#   dockerctl inspect mycontainer ipf
+#   dockerq inspect mycontainer ipf
 #
 # To get the IP of the specified container, or
 #
-#   dockerctl inspect somename ipf -t container
+#   dockerq inspect somename ipf -t container
 #
 # To apply `somename` as a matching filter to all `container` names to run the inspect query against
 #
 ###/doc
 
-$%function dctl:inspect:_main(assetname filtername) {
+$%function dockerq:inspect:_main(assetname filtername) {
     if [[ "$assetname" = '--list' ]]; then
-        dctl:config:_list_stored_strings
+        dockerq:config:_list_stored_strings
         exit
     fi
 
     local filterdefs=(
         s:assettype:-t,--type
         b:DEBUG_mode:--debug
-        b:DCTL_ALL:-a,--all
+        b:DOCKERQ_ALL:-a,--all
     )
     local assettype jsonstring
 
     args:parse filterdefs - "$@"
 
-    dctl:inspect:_load_json_string jsonstring "$filtername"
+    dockerq:inspect:_load_json_string jsonstring "$filtername"
 
     # Extrapolate asset type and set the flag array
     if [[ -n "${assettype:-}" ]]; then
-        dctl:inspect:_extrapolate_type assettype
+        dockerq:inspect:_extrapolate_type assettype
         assettype_a=(: --type="$assettype")
     else
         assettype_a=(:)
     fi
 
     # Use extrapolated asset type and list assets
-    if [[ "${DCTL_ALL:-}" = true ]] && [[ -n "${assettype:-}" ]]; then
-        all_assets=($(dctl:${assettype}s:_main -n | grep "$assetname"))
+    if [[ "${DOCKERQ_ALL:-}" = true ]] && [[ -n "${assettype:-}" ]]; then
+        all_assets=($(dockerq:${assettype}s:_main -n | grep "$assetname"))
     else
         all_assets=("$assetname")
     fi
 
     # =====
     for one_asset in "${all_assets[@]}"; do
-        dctl:run inspect "${assettype_a[@]:1}" "$one_asset" | jq "$jsonstring"
+        dockerq:run inspect "${assettype_a[@]:1}" "$one_asset" | jq "$jsonstring"
     done
 }
 
-$%function dctl:inspect:_load_json_string(*p_return filtername) {
-    p_return="$(dctl:config:read DCTL_JSON_FILTERS "$filtername")"
+$%function dockerq:inspect:_load_json_string(*p_return filtername) {
+    p_return="$(dockerq:config:read DOCKERQ_JSON_FILTERS "$filtername")"
     debug:print "Loaded json string: ${CBTEA}$p_return"
 }
 
-$%function dctl:inspect:_extrapolate_type(*p_assettype) {
+$%function dockerq:inspect:_extrapolate_type(*p_assettype) {
     case "$p_assettype" in
     v|volume) p_assettype=volume ;;
     i|image) p_assettype=image ;;

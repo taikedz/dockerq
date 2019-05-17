@@ -1,11 +1,11 @@
 
-dctl:config:_list_stored_strings() {
+dockerq:config:_list_stored_strings() {
     out:info "These are the configured filters"
 
     local available_files=(:)
     local k f keys
 
-    for f in "${DCTL_ASSET_CONFIGS[@]}"; do
+    for f in "${DOCKERQ_ASSET_CONFIGS[@]}"; do
         [[ ! -f "$f" ]] || available_files+=("$f")
     done
 
@@ -19,25 +19,25 @@ dctl:config:_list_stored_strings() {
     keys=($(grep -hPo '^(.+?)(?=\=)' "${available_files[@]:1}"|sort|uniq) )
 
     for k in "${keys[@]}"; do
-        echo "$k --> $(config:read DCTL_JSON_FILTERS "$k")"
+        echo "$k --> $(config:read DOCKERQ_JSON_FILTERS "$k")"
     done
 }
 
-dctl:config:read() {
+dockerq:config:read() {
     local value
     config:read "$@" || out:fail "Could not read from config | $2"
 }
 
-dctl:config:_set_asset_configs() {
-    local cfname="dockerctl-queries.conf"
-    local cfpath="dockerctl/$cfname"
+dockerq:config:_set_asset_configs() {
+    local cfname="dockerq-queries.conf"
+    local cfpath="dockerq/$cfname"
 
-    DCTL_ASSET_CONFIGS=(
+    DOCKERQ_ASSET_CONFIGS=(
         "./$cfname"
         "$HOME/.config/$cfpath"
         "/etc/$cfpath"
     )
 
-    config:declare DCTL_JSON_FILTERS "${DCTL_ASSET_CONFIGS[@]}"
+    config:declare DOCKERQ_JSON_FILTERS "${DOCKERQ_ASSET_CONFIGS[@]}"
 }
-dctl:config:_set_asset_configs
+dockerq:config:_set_asset_configs

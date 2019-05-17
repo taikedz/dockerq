@@ -1,5 +1,6 @@
 ### dockerq ASSETTYPE [OPTIONS] Usage:help
-# Short, consistent docker commands for common tasks.
+#
+# Short, consistent docker query commands for common tasks.
 #
 # OPTIONS
 # -------
@@ -15,8 +16,8 @@
 #
 # -f, --format
 #   Specify a stored format string name
-#   You can store format strings in dockerctl-queries.conf
-#   in ./ , ~/.config/dockerctl/ or /etc/dockerctl/
+#   You can store format strings in dockerq-queries.conf
+#   in ./ , ~/.config/dockerq/ or /etc/dockerq/
 #   as key-value pairs
 #
 #   e.g.

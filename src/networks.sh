@@ -1,17 +1,17 @@
-dctl:networks:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:networks:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run network ls --format '{{.Name}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run network ls --format '{{.Name}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run network ls --format '{{.ID}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run network ls --format '{{.ID}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run network ls --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run network ls --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run network ls
+        dockerq:run network ls
     fi
 }
 

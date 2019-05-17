@@ -1,17 +1,17 @@
-dctl:volumes:_main() {
-    dctl:main:parse_list_args "$@"
+dockerq:volumes:_main() {
+    dockerq:main:parse_list_args "$@"
 
-    if [[ "${DCTL_PRINTNAME:-}" = true ]]; then
-        dctl:run volume ls --format '{{.Name}}'
+    if [[ "${DOCKERQ_PRINTNAME:-}" = true ]]; then
+        dockerq:run volume ls --format '{{.Name}}'
 
-    elif [[ "${DCTL_PRINTID:-}" = true ]]; then
-        dctl:run volume ls --format '{{.Name}}'
+    elif [[ "${DOCKERQ_PRINTID:-}" = true ]]; then
+        dockerq:run volume ls --format '{{.Name}}'
 
-    elif [[ -n "${DCTL_FORMATSTRING:-}" ]]; then
-        dctl:run volume ls --format "${DCTL_FORMATSTRING:-}" | dctl:common:column
+    elif [[ -n "${DOCKERQ_FORMATSTRING:-}" ]]; then
+        dockerq:run volume ls --format "${DOCKERQ_FORMATSTRING:-}" | dockerq:common:column
 
     else
-        dctl:run volume ls
+        dockerq:run volume ls
     fi
 }
 
