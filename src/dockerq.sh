@@ -34,7 +34,7 @@ $%function dockerq:subcommand(subcommand) {
     n|networks)
         dockerq:networks:_main "$@"
         ;;
-    inspect)
+    ins|inspect)
         dockerq:inspect:_main "$@"
         ;;
     *)
