@@ -18,6 +18,7 @@
 #%include volumes.sh
 #%include networks.sh
 
+#%include clean.sh
 #%include inspect.sh
 
 $%function dockerq:subcommand(subcommand) {
@@ -36,6 +37,9 @@ $%function dockerq:subcommand(subcommand) {
         ;;
     ins|inspect)
         dockerq:inspect:_main "$@"
+        ;;
+    clean)
+        dockerq:clean:_main "$@"
         ;;
     *)
         out:fail "Unknown command: '$subcommand'"

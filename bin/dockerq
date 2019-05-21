@@ -47,7 +47,7 @@
 #
 ###/doc
 
-##bash-libs: safe.sh @ 7f063581 (2.1.14)
+##bash-libs: safe.sh @ 42057ae1 (2.1.11)
 
 ### Safe mode Usage:bbuild
 #
@@ -107,7 +107,7 @@ safe:glob() {
 set -eufo pipefail
 
 
-##bash-libs: syntax-extensions.sh @ 7f063581 (2.1.14)
+##bash-libs: syntax-extensions.sh @ 42057ae1 (2.1.11)
 
 ### Syntax Extensions Usage:syntax
 #
@@ -228,7 +228,7 @@ syntax-extensions:use:local() {
 args:use:local() {
     syntax-extensions:use:local "$@"
 }
-##bash-libs: tty.sh @ 7f063581 (2.1.14)
+##bash-libs: tty.sh @ 42057ae1 (2.1.11)
 
 ### tty.sh Usage:bbuild
 # Get information on the current terminal session.
@@ -258,7 +258,7 @@ tty:is_multiplexer() {
     [[ -n "${TMUX:-}" ]] || [[ "${TERM:-}" = screen ]]
 }
 
-##bash-libs: colours.sh @ 7f063581 (2.1.14)
+##bash-libs: colours.sh @ 42057ae1 (2.1.11)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -425,7 +425,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 7f063581 (2.1.14)
+##bash-libs: out.sh @ 42057ae1 (2.1.11)
 
 ### Console output handlers Usage:bbuild
 #
@@ -512,7 +512,95 @@ function out:fail {
 function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
-##bash-libs: patterns.sh @ 7f063581 (2.1.14)
+##bash-libs: abspath.sh @ 42057ae1 (2.1.11)
+
+### abspath:path RELATIVEPATH [ MAX ] Usage:bbuild
+# Returns the absolute path of a file/directory
+#
+# MAX defines the maximum number of "../" relative items to process
+#   default is 50
+###/doc
+
+function abspath:path {
+    local workpath="$1" ; shift || :
+    local max="${1:-50}" ; shift || :
+
+    if [[ "${workpath:0:1}" != "/" ]]; then workpath="$PWD/$workpath"; fi
+
+    workpath="$(abspath:collapse "$workpath")"
+    abspath:resolve_dotdot "$workpath" "$max" | sed -r 's|(.)/$|\1|'
+}
+
+function abspath:collapse {
+    echo "$1" | sed -r 's|/\./|/|g ; s|/\.$|| ; s|/+|/|g'
+}
+
+function abspath:resolve_dotdot {
+    local workpath="$1"; shift || :
+    local max="$1"; shift || :
+
+    # Set a limit on how many iterations to perform
+    # Only very obnoxious paths should fail
+    local obnoxious_counter
+    for obnoxious_counter in $(seq 1 $max); do
+        # No more dot-dots - good to go
+        if [[ ! "$workpath" =~ /\.\.(/|$) ]]; then
+            echo "$workpath"
+            return 0
+        fi
+
+        # Starts with an up-one at root - unresolvable
+        if [[ "$workpath" =~ ^/\.\.(/|$) ]]; then
+            return 1
+        fi
+
+        workpath="$(echo "$workpath"|sed -r 's@[^/]+/\.\.(/|$)@@')"
+    done
+
+    # A very obnoxious path was used.
+    return 2
+}
+
+##bash-libs: this.sh @ 42057ae1 (2.1.11)
+
+### this: Info about the current command Usage:bbuild
+#
+# Get information about the current running app.
+#
+# Additional to the documented functions, there are three environment variables:
+#
+# * `THIS_basename` : the plain name of the currently running script
+# * `THIS_dirname` : the absolute path to the script's containing directory
+# * `THIS_scriptpath` : the absolute path to the script
+#
+###/doc
+
+### this:bin Usage:bbuild
+# The file name of the running script, without its path
+###/doc
+function this:bin {
+    if [[ -n "${BBRUN_SCRIPT:-}" ]]; then
+        basename "$BBRUN_SCRIPT"
+    else
+        basename "$0"
+    fi
+}
+
+### this:bindir Usage:bbuild
+# The absolute path of the directory in which the command is running
+###/doc
+function this:bindir {
+    if [[ -n "${BBRUN_SCRIPT:-}" ]]; then
+        dirname "$BBRUN_SCRIPT"
+    else
+        abspath:path "$(dirname "$0")"
+    fi
+}
+
+THIS_basename="$(this:bin)"
+THIS_dirname="$(this:bindir)"
+THIS_scriptpath="$THIS_dirname/$THIS_basename"
+##bash-libs: patterns.sh @ 42057ae1 (2.1.11)
 
 ### Useful patterns Usage:bbuild
 #
@@ -584,7 +672,7 @@ format:wrap() {
     fold -w "$cols" -s
 }
 
-##bash-libs: autohelp.sh @ 7f063581 (2.1.14)
+##bash-libs: autohelp.sh @ 42057ae1 (2.1.11)
 
 ### Autohelp Usage:bbuild
 #
@@ -694,7 +782,7 @@ autohelp:print() {
     . <(args:use:local ?section_string ?target_file -- "$@") ; 
     local input_line
     [[ -n "$section_string" ]] || section_string=help
-    [[ -n "$target_file" ]] || target_file="$0"
+    [[ -n "$target_file" ]] || target_file="$THIS_scriptpath"
 
     local sec_start='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s+(.+?)\s+Usage:'"$section_string"'\s*$'
     local sec_end='^\s*'"$HELPCHAR$HELPCHAR$HELPCHAR"'\s*/doc\s*$'
@@ -735,7 +823,7 @@ autohelp:paged() {
 ###/doc
 autohelp:check-or-null() {
     if [[ -z "$*" ]]; then
-        autohelp:print help "$0"
+        autohelp:print help "$THIS_scriptpath"
         exit 0
     else
         autohelp:check:section "help" "$@"
@@ -749,7 +837,7 @@ autohelp:check-or-null() {
 autohelp:check-or-null:section() {
     . <(args:use:local section -- "$@") ; 
     if [[ -z "$*" ]]; then
-        autohelp:print "$section" "$0"
+        autohelp:print "$section" "$THIS_scriptpath"
         exit 0
     else
         autohelp:check:section "$section" "$@"
@@ -781,7 +869,7 @@ autohelp:check:section() {
     done
 }
 
-##bash-libs: strings.sh @ 7f063581 (2.1.14)
+##bash-libs: strings.sh @ 42057ae1 (2.1.11)
 
 ### Strings library Usage:bbuild
 #
@@ -852,7 +940,7 @@ strings:split() {
     p_returnarray=("${items[@]:1}")
 }
 
-##bash-libs: args.sh @ 7f063581 (2.1.14)
+##bash-libs: args.sh @ 42057ae1 (2.1.11)
 
 ### args Usage:bbuild
 #
@@ -1136,7 +1224,7 @@ args:_unpack_argdef() {
     fi
 }
 
-##bash-libs: debug.sh @ 7f063581 (2.1.14)
+##bash-libs: debug.sh @ 42057ae1 (2.1.11)
 
 ### Debug lib Usage:bbuild
 #
@@ -1154,6 +1242,30 @@ args:_unpack_argdef() {
 ###/doc
 
 : ${DEBUG_mode=false}
+
+### debug:mode [output | /output | verbose | /verbose] ... Usage:bbuild
+#
+# Activate debug output (`output`), or activate command tracing (`verbose`)
+#
+# Deactivate with the corresponding `/output` and `/verbose` options
+#
+###/doc
+
+function debug:mode() {
+    local mode_switch
+    for mode_switch in "$@"; do
+        case "$mode_switch" in
+        output)
+            DEBUG_mode=true ;;
+        /output)
+            DEBUG_mode=false ;;
+        verbose)
+            set -x ;;
+        /verbose)
+            set +x ;;
+        esac
+    done
+}
 
 ### debug:print MESSAGE Usage:bbuild
 # print a blue debug message to stderr
@@ -1183,7 +1295,7 @@ function debug:dump {
     if [[ "$DEBUG_mode" = true ]]; then
         local MARKER="${1:-DEBUG: }"; shift || :
 
-        cat - | sed -r "s/^/$MARKER/" | tee -a /dev/stderr | sed -r "s/^$MARKER//"
+        cat - | sed -r "s/^/$MARKER/" | tee -a /dev/stderr
     else
         cat -
     fi
@@ -1259,7 +1371,7 @@ debug:_break_dump() {
     fi
 }
 
-##bash-libs: config.sh @ 7f063581 (2.1.14)
+##bash-libs: config.sh @ 42057ae1 (2.1.11)
 
 ### config.sh Usage:bbuild
 # Read configuration from various locations.
@@ -1286,6 +1398,7 @@ debug:_break_dump() {
 #
 ###/doc
 
+DEBUG_mode=true
 
 config:declare() {
     . <(args:use:local *p_configname -- "$@") ; 
@@ -1295,7 +1408,7 @@ config:declare() {
 config:_read_value() {
     . <(args:use:local key file -- "$@") ; 
     [[ "$key" =~ $PAT_cvar ]] || out:fail "Invalid config key '$key' -- must match '$PAT_cvar'"
-    grep -P "^\\s*$key" "$file"|sed -r "s/^\\s*$key=//"| tail -n1
+    grep -P "^$key" "$file"|grep -oP "(?<=$key=).*"| tail -n1
 }
 
 config:_has_key() {
@@ -1595,6 +1708,53 @@ dockerq:networks:_main() {
 }
 
 
+### dockerq clean MODE Usage:dockerq-clean
+#
+# Clean up docker.
+#
+# Only one MODE exists currently:
+#
+# none
+#   Clean out images that have "none" names
+#   Also removes any containers dependent on such images
+#
+#   Tool for cleaning up a development environment after many intermediary builds
+#
+###/doc
+
+# TODO - only cleanup for images whose containers are not running
+
+dockerq:clean:noneimages() {
+    docker images --format '{{.ID}} {{.Repository}}/{{.Tag}}'|grep '<none>/<none>'|while read id name; do
+        echo $id
+    done
+}
+
+dockerq:clean:nonecontainers() {
+    local images="$(dockerq:clean:noneimages|xargs echo|sed -r 's/ /|/g')";
+
+    docker ps -a --format '{{.ID}} {{.Image}}'|grep -E "$images"|while read cid imid; do
+        echo $cid
+    done
+}
+
+dockerq:clean:none() {
+	dockerq:clean:nonecontainers | xargs docker rm
+	dockerq:clean:noneimages | xargs docker rmi
+}
+
+dockerq:clean:_main() {
+    . <(args:use:local action -- "$@") ; 
+	case "$action" in
+    none)
+        dockerq:clean:none
+        ;;
+    *)
+        autohelp:print dockerq-clean
+        out:fail "Unknown clean method '$action'"
+        ;;
+    esac
+}
 ### dockerq inspect ASSETNAME FILTERNAME [OPTIONS] Usage:help
 #
 # OPTIONS
@@ -1710,6 +1870,9 @@ dockerq:subcommand() {
         ;;
     ins|inspect)
         dockerq:inspect:_main "$@"
+        ;;
+    clean)
+        dockerq:clean:_main "$@"
         ;;
     *)
         out:fail "Unknown command: '$subcommand'"
