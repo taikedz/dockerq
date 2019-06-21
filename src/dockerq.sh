@@ -19,6 +19,7 @@
 #%include networks.sh
 
 #%include inspect.sh
+#%include docker-clean.sh
 
 $%function dockerq:subcommand(subcommand) {
     case "$subcommand" in
@@ -36,6 +37,9 @@ $%function dockerq:subcommand(subcommand) {
         ;;
     ins|inspect)
         dockerq:inspect:_main "$@"
+        ;;
+    noneclean)
+        dockerq:clean
         ;;
     *)
         out:fail "Unknown command: '$subcommand'"

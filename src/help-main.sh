@@ -43,4 +43,9 @@
 # n, network
 #   list basic network info
 #
+#
+# noneclean
+#   A special command to remove all images tagged "<none>/<none>"
+#   If stopped containers are based on these images, the containers are removed.
+#
 ###/doc

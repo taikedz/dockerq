@@ -45,9 +45,14 @@
 # n, network
 #   list basic network info
 #
+#
+# noneclean
+#   A special command to remove all images tagged "<none>/<none>"
+#   If stopped containers are based on these images, the containers are removed.
+#
 ###/doc
 
-##bash-libs: safe.sh @ 7f063581 (2.1.14)
+##bash-libs: safe.sh @ 0400607e (2.1.17)
 
 ### Safe mode Usage:bbuild
 #
@@ -107,7 +112,7 @@ safe:glob() {
 set -eufo pipefail
 
 
-##bash-libs: syntax-extensions.sh @ 7f063581 (2.1.14)
+##bash-libs: syntax-extensions.sh @ 0400607e (2.1.17)
 
 ### Syntax Extensions Usage:syntax
 #
@@ -228,7 +233,7 @@ syntax-extensions:use:local() {
 args:use:local() {
     syntax-extensions:use:local "$@"
 }
-##bash-libs: tty.sh @ 7f063581 (2.1.14)
+##bash-libs: tty.sh @ 0400607e (2.1.17)
 
 ### tty.sh Usage:bbuild
 # Get information on the current terminal session.
@@ -258,7 +263,7 @@ tty:is_multiplexer() {
     [[ -n "${TMUX:-}" ]] || [[ "${TERM:-}" = screen ]]
 }
 
-##bash-libs: colours.sh @ 7f063581 (2.1.14)
+##bash-libs: colours.sh @ 0400607e (2.1.17)
 
 ### Colours for terminal Usage:bbuild
 # A series of shorthand colour flags for use in outputs, and functions to set your own flags.
@@ -267,7 +272,7 @@ tty:is_multiplexer() {
 #
 # Example:
 # 	
-# 	echo "${CRED}Some red text ${CBBLU} some blue text. $CDEF Some text in the terminal's default colour")
+# 	echo "${CRED}Some red text ${CBBLU} some blue text. $CDEF Some text in the terminal's default colour"
 #
 # Preconfigured colours available:
 #
@@ -277,8 +282,8 @@ tty:is_multiplexer() {
 # CBLU, CBBLU, HLBLU -- blue, bright blue, highlight blue
 # CPUR, CBPUR, HLPUR -- purple, bright purple, highlight purple
 # CTEA, CBTEA, HLTEA -- teal, bright teal, highlight teal
-# CBLA, CBBLA, HLBLA -- black, bright red, highlight red
-# CWHI, CBWHI, HLWHI -- white, bright red, highlight red
+# CBLA, CBBLA, HLBLA -- black, "bright" black, highlight black
+# CWHI, CBWHI, HLWHI -- white, "bright" white, highlight white
 #
 # Modifiers available:
 #
@@ -292,16 +297,23 @@ tty:is_multiplexer() {
 #
 # CNORM -- turn off bright or dim, without affecting other modifiers
 # ULOFF -- turn off highlighting
-# RVOFF -- turn off inverse
+# RVOFF -- turn off reverse colours
 # SKOFF -- turn off strikethrough
 # HLOFF -- turn off highlight
 #
-# CDEF -- turn off all colours and modifiers(switches to the terminal default)
+# CDEF -- turn off all colours and modifiers (switches to the terminal default)
 #
 # Note that highlight and underline must be applied or re-applied after specifying a colour.
 #
 # If the session is detected as being in a pipe, colours will be turned off.
 #   You can override this by calling `colours:check --color=always` at the start of your script
+#
+#
+# /!\ SPELLING /!\
+#
+# For historic reasons, "colours.sh" was named using British spelling; however some options use American spelling to match expectations from using other tools like `ls` for example.
+#
+# Consider that in the future, this will likely be changed for consistency - this library would become fully Ameriquified and the library renamed to 'colors.sh' and all functions will start with 'color:'.
 #
 ###/doc
 
@@ -317,6 +329,8 @@ tty:is_multiplexer() {
 #   }
 #
 #   main "$@"
+#
+# Note use of American spelling in the option itself.
 #
 ###/doc
 colours:check() {
@@ -412,6 +426,14 @@ colours:define() {
 
 }
 
+### colours:remove Usage:help
+# Pipe function to remove ANSI colour bytes
+###/doc
+colours:remove() {
+    local _b=$'\033'
+    sed -r "s/${_b}\[[0-9;]+m//g"
+}
+
 colours:auto() {
     if tty:is_pipe ; then
         COLOURS_ON=false
@@ -425,7 +447,7 @@ colours:auto() {
 
 colours:auto
 
-##bash-libs: out.sh @ 7f063581 (2.1.14)
+##bash-libs: out.sh @ 0400607e (2.1.17)
 
 ### Console output handlers Usage:bbuild
 #
@@ -512,7 +534,7 @@ function out:fail {
 function out:error {
     echo "${CBRED}ERROR: ${CRED}$*$CDEF" 1>&2
 }
-##bash-libs: patterns.sh @ 7f063581 (2.1.14)
+##bash-libs: patterns.sh @ 0400607e (2.1.17)
 
 ### Useful patterns Usage:bbuild
 #
@@ -584,7 +606,7 @@ format:wrap() {
     fold -w "$cols" -s
 }
 
-##bash-libs: autohelp.sh @ 7f063581 (2.1.14)
+##bash-libs: autohelp.sh @ 0400607e (2.1.17)
 
 ### Autohelp Usage:bbuild
 #
@@ -781,7 +803,7 @@ autohelp:check:section() {
     done
 }
 
-##bash-libs: strings.sh @ 7f063581 (2.1.14)
+##bash-libs: strings.sh @ 0400607e (2.1.17)
 
 ### Strings library Usage:bbuild
 #
@@ -852,7 +874,49 @@ strings:split() {
     p_returnarray=("${items[@]:1}")
 }
 
-##bash-libs: args.sh @ 7f063581 (2.1.14)
+### strings:split:escaping *p__target splitter string_to_split Usage:bbuild
+#
+# Split a string into tokens along splitter ; returns the result in an array name-referenced by p__target
+#
+# Multiple splitter characters produce multiple tokens.
+#
+# Splitter characters escaped by preceding with `\` do not cause a split, and are replaced with literal instances of the splitter.
+#
+# E.g.
+#
+#   tokens="-a -b my\ path -c"
+#   strings:split:escaping result ' ' "$tokens"
+#
+# Store the split tokens in `${result[@]}`
+#
+# The contents of the array will be  `['-a', '-b', 'my path', '-c']`
+#
+###/doc
+
+
+strings:split:escaping() {
+    . <(args:use:local *p__target splitter string_to_split -- "$@") ; 
+    local SP_ESCP=$'\001'
+    local SP_REAL=$'\002'
+    local ESC_ESC=$'\003'
+    local holder=(:)
+
+    string_to_split="${string_to_split//\\\\/$ESC_ESC}"
+    string_to_split="${string_to_split//\\$splitter/$SP_ESCP}"
+    string_to_split="${string_to_split//$splitter/$SP_REAL}"
+    string_to_split="${string_to_split//$SP_ESCP/$splitter}"
+
+    strings:split holder "$SP_REAL" "$string_to_split"
+
+    p__target=(:)
+    for token in "${holder[@]}"; do
+        p__target+=("${token//$ESC_ESC/\\}")
+    done
+
+    p__target=("${p__target[@]:1}")
+}
+
+##bash-libs: args.sh @ 0400607e (2.1.17)
 
 ### args Usage:bbuild
 #
@@ -1063,13 +1127,18 @@ args:quote() {
 #   docopy --input infile.txt -o outfile.bin -b -x
 #
 #
+#
+# UNKNOWN FLAGS
+#
+# By default, if args:parse finds a flag that was not declared, it will cause a filure exit. You can set an environment variable `ARGS_allow_unknown_flags=true` to bypass this.
+#
 ###/doc
 args:parse() {
     . <(args:use:local *a_argsdefs ?flagless_returnname -- "$@") ; 
-    local arg argdef type name flags flagless
+    local arg __argdef __type __name __flags __flagless
 
     if [[ "$flagless_returnname" != "-" ]]; then
-        flagless=(:)
+        __flagless=(:)
         declare -n p_flaglessreturn="$flagless_returnname"
     fi
 
@@ -1077,26 +1146,26 @@ args:parse() {
         arg="$1"; shift
 
         if [[ "$arg" =~ ^- ]]; then
-            if ! args:_get_argdef "$arg" "argdef" "a_argsdefs"; then
+            if ! args:_get_argdef "$arg" "__argdef" "a_argsdefs" && [[ "${ARGS_allow_unknown_flags:-}" = true ]]; then
                 out:fail $ARGS_ERR_unknown_flag "Unknown flag '$arg'"
             fi
 
-            args:_unpack_argdef type name flags "$argdef"
+            args:_unpack_argdef __type __name __flags "$__argdef"
 
-            declare -n p_pointedvar="$name"
+            declare -n p_pointedvar="$__name"
 
-            if [[ "$type" = b ]]; then
+            if [[ "$__type" = b ]]; then
                 p_pointedvar=true
             else
-                p_pointedvar="${1:-}"; shift || out:fail $ARGS_ERR_missing_value "Argument parse error - expected value for '$name' (flag was '$arg')"
+                p_pointedvar="${1:-}"; shift || out:fail $ARGS_ERR_missing_value "Argument parse error - expected value for '$__name' (flag was '$arg')"
             fi
 
-            if [[ "$type" = n ]]; then
-                [[ "$p_pointedvar" =~ $PAT_num ]] || out:fail $ARGS_ERR_NaN "Argument parse error - expected number for '$name' but got '$p_pointedvar'"
+            if [[ "$__type" = n ]]; then
+                [[ "$p_pointedvar" =~ $PAT_num ]] || out:fail $ARGS_ERR_NaN "Argument parse error - expected number for '$__name' but got '$p_pointedvar'"
             fi
 
         elif [[ "$flagless_returnname" != "-" ]]; then
-            flagless+=("$arg")
+            __flagless+=("$arg")
 
         else
             out:fail $ARGS_ERR_unknown_token "Unrecognized token: '$arg'"
@@ -1104,7 +1173,7 @@ args:parse() {
     done
 
     if [[ "$flagless_returnname" != "-" ]]; then
-        p_flaglessreturn="${flagless[@]:1}"
+        p_flaglessreturn=("${__flagless[@]:1}")
     fi
 }
 
@@ -1136,7 +1205,7 @@ args:_unpack_argdef() {
     fi
 }
 
-##bash-libs: debug.sh @ 7f063581 (2.1.14)
+##bash-libs: debug.sh @ 0400607e (2.1.17)
 
 ### Debug lib Usage:bbuild
 #
@@ -1259,7 +1328,7 @@ debug:_break_dump() {
     fi
 }
 
-##bash-libs: config.sh @ 7f063581 (2.1.14)
+##bash-libs: config.sh @ 0400607e (2.1.17)
 
 ### config.sh Usage:bbuild
 # Read configuration from various locations.
@@ -1693,6 +1762,293 @@ dockerq:inspect:_extrapolate_type() {
     esac
 }
 
+##bash-libs: askuser.sh @ 0400607e (2.1.17)
+
+### askuser Usage:bbuild
+# Present the user with questions on stderr
+###/doc
+
+yespat='^(yes|YES|y|Y)$'
+numpat='^[0-9]+$'
+rangepat='[0-9]+,[0-9]+'
+listpat='^[0-9 ]+$'
+blankpat='^ *$'
+
+### askuser:confirm Usage:bbuild
+# Ask the user to confirm a closed question. Defaults to no
+#
+# returns 0 on successfully match 'y' or 'yes'
+# returns 1 otherwise
+###/doc
+function askuser:confirm {
+    read -p "$* [y/N] > " 1>&2
+    if [[ "$REPLY" =~ $yespat ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+### askuser:ask Usage:bbuild
+# Ask the user to provide some text
+#
+# Echoes out the entered text
+###/doc
+function askuser:ask {
+    read -p "$* : " 1>&2
+    echo "$REPLY"
+}
+
+### askuser:password Usage:bbuild
+# Ask the user to enter a password (does not echo what is typed)
+#
+# Echoes out the entered text
+###/doc
+function askuser:password {
+    read -s -p "$* : " 1>&2
+    echo >&2
+    echo "$REPLY"
+}
+
+### askuser:choose_multi Usage:bbuild
+# Allows the user to choose from multiple choices
+#
+# askuser:chose_multi MESG CHOICESTRING
+#
+#
+# MESG is a single string token that will be displayed as prompt
+#
+# CHOICESTRING is a comma-separated, or newline separated, or "\\n"-separated token string
+#
+# Equivalent strings include:
+#
+# * `"a\\nb\\nc"` - quoted and explicit newline escapes
+# * `"a,b,c"` - quoted and separated with commas
+# * `a , b , c` - not quoted, separated by commas
+# * `a`, `b` and `c` on their own lines
+#
+# User input:
+#
+# User can choose by selecting
+#
+# * a single item by number
+# * a range of numbers (4,7 for range 4 to 7)
+# * or a string that matches the pattern
+#
+# All option lines that match will be returned, one per line
+#
+# If the user selects nothing, then function returns 1 and an empty stdout
+###/doc
+function askuser:choose_multi {
+    local mesg=$1; shift || :
+    local choices=$(echo "$*"|sed -r 's/ *, */\n/g')
+
+    out:info "$mesg:" 
+    local choicelist="$(echo -e "$choices"|grep -E '^' -n| sed 's/:/: /')"
+    echo "$choicelist" 1>&2
+    
+    local sel=$(askuser:ask "Choice")
+    if [[ "$sel" =~ $blankpat ]]; then
+        return 1
+
+    elif [[ "$sel" =~ $numpat ]] || [[ "$sel" =~ $rangepat ]]; then
+        echo -e "$choices" | sed -n "$sel p"
+    
+    elif [[ "$sel" =~ $listpat ]]; then
+        echo "$choicelist" | grep -E "^${sel// /|}:" | sed -r 's/^[0-9]+: //'
+
+    else
+        echo -e "$choices"  |grep -E "$(echo "$sel"|tr " " '|')"
+    fi
+    return 0
+}
+
+### askuser:choose Usage:bbuild
+# Ask the user to choose an item
+#
+# Like askuser:choose_multi, but will loop if the user selects more than one item
+#
+# If the user provides no entry, returns 1
+#
+# If the user chooses one item, that item is echoed to stdout
+###/doc
+function askuser:choose {
+    local mesg=$1; shift || :
+    while true; do
+        local thechoice="$(askuser:choose_multi "$mesg" "$*")"
+        local lines=$(echo -n "$thechoice" | grep '$' -c)
+        if [[ $lines = 1 ]]; then
+            echo "$thechoice"
+            return 0
+        elif [[ $lines = 0 ]]; then
+            return 1
+        else
+            out:warn "Too many results"
+        fi
+    done
+}
+##bash-libs: abspath.sh @ 0400607e (2.1.17)
+
+### abspath:path RELATIVEPATH [ MAX ] Usage:bbuild
+# Returns the absolute path of a file/directory
+#
+# MAX defines the maximum number of "../" relative items to process
+#   default is 50
+###/doc
+
+function abspath:path {
+    local workpath="$1" ; shift || :
+    local max="${1:-50}" ; shift || :
+
+    if [[ "${workpath:0:1}" != "/" ]]; then workpath="$PWD/$workpath"; fi
+
+    workpath="$(abspath:collapse "$workpath")"
+    abspath:resolve_dotdot "$workpath" "$max" | sed -r 's|(.)/$|\1|'
+}
+
+function abspath:collapse {
+    echo "$1" | sed -r 's|/\./|/|g ; s|/\.$|| ; s|/+|/|g'
+}
+
+function abspath:resolve_dotdot {
+    local workpath="$1"; shift || :
+    local max="$1"; shift || :
+
+    # Set a limit on how many iterations to perform
+    # Only very obnoxious paths should fail
+    local obnoxious_counter
+    for obnoxious_counter in $(seq 1 $max); do
+        # No more dot-dots - good to go
+        if [[ ! "$workpath" =~ /\.\.(/|$) ]]; then
+            echo "$workpath"
+            return 0
+        fi
+
+        # Starts with an up-one at root - unresolvable
+        if [[ "$workpath" =~ ^/\.\.(/|$) ]]; then
+            return 1
+        fi
+
+        workpath="$(echo "$workpath"|sed -r 's@[^/]+/\.\.(/|$)@@')"
+    done
+
+    # A very obnoxious path was used.
+    return 2
+}
+
+##bash-libs: this.sh @ 0400607e (2.1.17)
+
+### this: Info about the current command Usage:bbuild
+#
+# Get information about the current running app.
+#
+# Additional to the documented functions, there are three environment variables:
+#
+# * `THIS_basename` : the plain name of the currently running script
+# * `THIS_dirname` : the absolute path to the script's containing directory
+# * `THIS_scriptpath` : the absolute path to the script
+#
+###/doc
+
+### this:bin Usage:bbuild
+# The file name of the running script, without its path
+###/doc
+function this:bin {
+    if [[ -n "${BBRUN_SCRIPT:-}" ]]; then
+        basename "$BBRUN_SCRIPT"
+    else
+        basename "$0"
+    fi
+}
+
+### this:bindir Usage:bbuild
+# The absolute path of the directory in which the command is running
+###/doc
+function this:bindir {
+    if [[ -n "${BBRUN_SCRIPT:-}" ]]; then
+        dirname "$BBRUN_SCRIPT"
+    else
+        abspath:path "$(dirname "$0")"
+    fi
+}
+
+THIS_basename="$(this:bin)"
+THIS_dirname="$(this:bindir)"
+THIS_scriptpath="$THIS_dirname/$THIS_basename"
+
+##bash-libs: runmain.sh @ 0400607e (2.1.17)
+
+### runmain SCRIPTNAME FUNCTION [ARGUMENTS ...] Usage:bbuild
+#
+# Runs the function FUNCTION with ARGUMENTS, only if the runtime
+# name of the script matches SCRIPTNAME
+#
+# This allows you include a main-like function in your library
+# that only runs if you use your lib as an executable itself.
+#
+# For example, an image archiver could be:
+#
+# 	function archive_images {
+# 		tar czf "$1.tgz" "$@"
+# 	}
+#
+# 	runmain archiveimages.sh archive_images "$@"
+#
+# When included a different script, the runmain call does not fire the lib's function
+#
+# If the lib is compiled/made executable, and named "archiveimages.sh", the function runs.
+#
+# This is similar to `if __name__ == "__main__"` clauses in python
+#
+###/doc
+
+function runmain {
+    local required_name="$1"; shift || :
+    local funcall="$1"; shift || :
+    local scriptname="$THIS_basename"
+
+    if [[ "$required_name" = "$scriptname" ]]; then
+        "$funcall" "$@"
+    fi
+}
+
+dockerq:noneimages() {
+    docker images --format '{{.ID}} {{.Repository}}/{{.Tag}}'|grep '<none>/<none>'|while read id name; do
+        echo $id
+        out:warn "Removing image $id"
+    done
+}
+
+dockerq:nonecontainers() {
+    local images="$(dockerq:noneimages|xargs echo|sed -r 's/ /|/g')";
+
+    docker ps -a --format '{{.ID}} {{.Image}} {{.Names}}'|grep -E "$images"|while read cid imid cname; do
+        echo $cid
+        out:warn "$cname"
+    done
+}
+
+dockerq:dorm() {
+    . <(args:use:local extractor -- "$@") ; 
+    local ids="$("$extractor" | xargs echo)"
+
+    if [[ -n "$ids" ]]; then
+        askuser:confirm "Remove these items?" || out:fail "Abort"
+        (set -x
+        "$@" $ids
+        )
+    else
+        echo "${extractor/dockerq:none/}: Nothing to remove"
+    fi
+}
+
+dockerq:clean() {
+    dockerq:dorm dockerq:nonecontainers docker rm
+    dockerq:dorm dockerq:noneimages     docker rmi
+}
+
+runmain docker-clean.sh dockerq:clean "$@"
+
 dockerq:subcommand() {
     . <(args:use:local subcommand -- "$@") ; 
     case "$subcommand" in
@@ -1710,6 +2066,9 @@ dockerq:subcommand() {
         ;;
     ins|inspect)
         dockerq:inspect:_main "$@"
+        ;;
+    noneclean)
+        dockerq:clean
         ;;
     *)
         out:fail "Unknown command: '$subcommand'"
